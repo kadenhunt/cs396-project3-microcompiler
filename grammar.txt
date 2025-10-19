@@ -1,0 +1,13 @@
+grammar i would like to implement at the end
+
+program     = { statement } ;
+statement   = assignment | print_stmt ;
+assignment  = identifier "=" expression ";" ;
+print_stmt  = "print" identifier ";" ;
+expression  = term { ("+" | "-") term } ;
+term        = factor { ("*" | "/") factor } ;
+factor      = identifier | number | "(" expression ")" ;
+identifier  = letter { letter | digit } ;
+number      = digit { digit } ;
+letter      = "a"…"z" | "A"…"Z" ;
+digit       = "0"…"9" ;
