@@ -2,11 +2,10 @@ grammar i would like to implement at the end
 
 program     = { statement } ;
 statement   = assignment | print_stmt ;
-assignment  = identifier "=" expression ";" ;
-print_stmt  = "print" identifier ";" ;
-expression  = term { ("+" | "-") term } ;
-term        = factor { ("*" | "/") factor } ;
-factor      = identifier | number | "(" expression ")" ;
+assignment  = identifier "=" expression ;
+print_stmt  = "print" expression ";" ;
+expression  = factor { ("+" | "-") factor } ;
+factor      = identifier | number ;
 identifier  = letter { letter | digit } ;
 number      = digit { digit } ;
 letter      = "a"…"z" | "A"…"Z" ;

@@ -1,0 +1,5 @@
+x = 5 + 2
+z = y - 1
+print 42
+print x
+print y + z - 4
