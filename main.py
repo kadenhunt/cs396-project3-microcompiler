@@ -1,21 +1,19 @@
 from lexer import Lexer
 from parser import Parser
-from codegen import CodeGen
+from codegen import CodeGen  # decoupled later for containerization prep
 
 def main():
     #Lexical Analysis
     lexer = Lexer('source.txt')
     tokens = lexer.tokens()
 
-    #CodeGen setup
-    codegen = CodeGen()
-
     #Token Parsing
-    parser = Parser(tokens, codegen)
-    parser.parse_program()
+    parser = Parser(tokens)
+    ast = parser.parse_program()
 
-    #Generate the machine code
-    codegen.output()
+    codegen = CodeGen()
+    codegen.generate_program(ast, 'out.asm')
+    print("Wrote out.asm")
 
 if __name__ == '__main__':
     main()

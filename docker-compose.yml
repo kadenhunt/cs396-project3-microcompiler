@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  lexer:
+    build:
+      context: .
+      dockerfile: ./lexer/Dockerfile
+    ports: ["5001:5001"]
+    networks: [compiler]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5001/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  parser:
+    build:
+      context: .
+      dockerfile: ./parser/Dockerfile
+    ports: ["5002:5002"]
+    depends_on: [lexer]
+    networks: [compiler]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5002/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  codegen:
+    build:
+      context: .
+      dockerfile: ./codegen/Dockerfile
+    ports: ["5003:5003"]
+    depends_on: [parser]
+    volumes:
+      - ./output:/output
+    networks: [compiler]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5003/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  gateway:
+    build:
+      context: .
+      dockerfile: ./gateway/Dockerfile
+    ports: ["5000:5000"]
+    depends_on:
+      - lexer
+      - parser
+      - codegen
+    networks: [compiler]
+
+networks:
+  compiler:
+    driver: bridge

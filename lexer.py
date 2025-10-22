@@ -11,9 +11,16 @@ class Lexer:
 
         for line in self.f:
             self.line_nr += 1
-            for token in line.strip().split(' '):
+
+            for ch in ['+', '-', ';', '=']:
+                line = line.replace(ch, f' {ch} ')
+
+
+            for token in line.split():
                 if token in ['print', '=', '+', '-']:
                     token_list.append((token,))
+                elif token == ';':                         # <— add this
+                    token_list.append(('newline',)) 
                 elif token.isnumeric():
                     token_list.append(('number', int(token)))
                 elif token.isidentifier():
@@ -21,6 +28,6 @@ class Lexer:
                 else:
                     self.raise_error(f'Syntax Error: Invalid token {token}')
 
-            token_list.append(('newline',))
+            
         
         return token_list

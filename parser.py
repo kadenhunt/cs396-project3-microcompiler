@@ -1,10 +1,8 @@
-from codegen import CodeGen
-
 class Parser:
-    def __init__(self, tokens, codegen):
+    def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
-        self.codegen = codegen
+        
     
     def get_token(self):
         if self.pos < len(self.tokens):
@@ -34,116 +32,95 @@ class Parser:
         return None
                
     def parse_program(self):
-        #count = 1
+        ast = []
         while not self.at_end():
-            #print(f'stmt # {count} ran')
-            #count += 1
-            if not self.parse_stmt():
+            token = self.get_token()
+            if token is None:
                 break
+            if token[0] == 'newline':
+                self.advance()
+                continue
+            ast.append(self.parse_stmt())
+            while self.get_token() and self.get_token()[0] == 'newline':
+                self.advance()
+        return ('Program', ast)
+
 
     def parse_stmt(self):
-        #print(f'starting parse_stmt, token: {self.get_token()[0]}')
         token = self.get_token()
         if token is None:
-            return False
-        
+            raise SyntaxError("unexpected EOF in statement")
+
         if token[0] == 'print':
-            #print(f'{token[0]} here is where i call parse_print')
-            check = self.parse_print()
-            if check:
-                if self.get_token()[0]=='newline':
-                    self.advance()
-                return True
-        
-        elif token[0] == 'identifier':
-            #print(f'{token[0]} here is where i call parse_asmt')
-            check = self.parse_asmt()
-            if check:
-                if self.get_token()[0]=='newline':
-                    self.advance()
-                return True
-        
-        else:
-            return False
+            return self.parse_print()
+
+        if token[0] == 'identifier':
+            return self.parse_asmt()
+
+        raise SyntaxError(f"unexpected token in statement: {token}")
+
   
     def parse_print(self):
-        token = self.get_token()
-        
-        if token[0] == 'print':
-            if self.peek()[0] in ['number', 'identifier']:
-                self.advance() #now its on the number or identifier
-                check = self.parse_expr()
-            else: 
-                print('error: expected a value to print')
-                return False
-            
-        else: 
-            print('error: expected print statement')
-            return False
-        
-        if check:
-            token = self.get_token() #checking to see what the token is after calling expr
-            if token and token[0] == 'newline':
-                self.codegen.generate_print() #if we are at the end like we should be, print
-                return True
-            return False
-        else: 
-            print('error in parse_print')
-            return False
+        t = self.get_token()
+        if not t or t[0] != 'print':
+            raise SyntaxError("expected 'print'")
+
+        self.advance()  # move past 'print'
+        expr = self.parse_expr()
+        self.expect_newline()
+        return ('Print', expr)
+
     
     def parse_asmt(self):
-        token = self.get_token()
-        
-        if token[0] == 'identifier':
-            id = token[1] #save the identifier
-            
-            if self.peek()[0] == '=':
-                self.advance() #now its on =
-                
-                if self.peek()[0] in ['number', 'identifier']:
-                    self.advance() #now its on the number/variable of the expr
-                    check = self.parse_expr() #send it to the expr function
-                else:
-                    print('error: expected a value')
-                    return False
-                
-            else: 
-                print('error: expected "="')
-                return False
-        
-        else: 
-            print('error: expected variable name')
-            return False
-        
-        if check:
-            token = self.get_token() #checking to see what the token is after calling expr
-            if token and token[0] == 'newline':
-                self.codegen.generate_store(id) #if we are at the end like we should be, store it in the id
-                return True
-            return False
-        else: 
-            print('error in parse_asmt')
-            return False
+        t = self.get_token()
+        if not t or t[0] != 'identifier':
+            raise SyntaxError("expected identifier at start of assignment")
+
+        name = t[1]
+        self.advance()  # past identifier
+
+        eq = self.get_token()
+        if not eq or eq[0] != '=':
+            raise SyntaxError("expected '=' after identifier")
+        self.advance()  # past '='
+
+        expr = self.parse_expr()
+        self.expect_newline()
+        return ('Assign', name, expr)
     
     def parse_expr(self):
-        token = self.get_token()
-        
-        if token[0] in ['number', 'identifier']:
-            self.codegen.generate_load(token[1]) #tell codegen load the number/variable
-            token = self.advance() #now we are either on an op or a \n
-            
-            while token[0] in ['+', '-']: #if its an op
-                op = token[0] #save the operator
-                token = self.advance() #now the number/variable to be + or -
+    # first term
+        t = self.get_token()
+        if not t or t[0] not in ['number', 'identifier']:
+            raise SyntaxError("expected number or identifier at start of expression")
 
-                if token[0] in ['number', 'identifier']: #ensuring that its a number/variable
-                    self.codegen.generate_op(op, token[1]) #tell codegen the op and number/variable
-                    token = self.advance()
-                else:
-                    print('error invalid token')
-                    break
-            if token[0] == 'newline':
-                return True
-        else:
-            print('error in parse_expr')
-            return False
+        left = ('Number', t[1]) if t[0] == 'number' else ('Var', t[1])
+        self.advance()  # move after the first term
+
+        # { ('+'|'-') term }
+        t = self.get_token()
+        while t and t[0] in ['+', '-']:
+            op = t[0]
+            self.advance()  # past +/-
+
+            t = self.get_token()
+            if not t or t[0] not in ['number', 'identifier']:
+                raise SyntaxError("expected number or identifier after operator")
+            right = ('Number', t[1]) if t[0] == 'number' else ('Var', t[1])
+            self.advance()  # past the right term
+
+            left = ('BinOp', op, left, right)  # left-associative chain
+            t = self.get_token()
+
+        return left
+
+    def expect(self, kind, msg):
+        t = self.get_token()
+        if not t or t[0] != kind:
+            got = t[0] if t else 'EOF'
+            raise SyntaxError(f"{msg}; got {got}")
+        self.advance()
+        return t
+
+    def expect_newline(self):
+        self.expect('newline', "expected newline at end of statement")
