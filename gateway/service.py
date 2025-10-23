@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, Request
 from pydantic import BaseModel
 import requests
 
@@ -21,9 +21,38 @@ def healthz():
     return {"ok": True, "phase": "gateway"}
 
 @app.post("/compile")
-def compile_code(body: Source):
+async def compile_code(request: Request):
+    # Accept either properly-formed JSON {"source":"..."}
+    # or PowerShell-style objects where source is an object with a `value` field
+    # or raw text body. Coerce to a plain Python string before forwarding.
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = None
+
+    src = None
+    if isinstance(payload, dict) and 'source' in payload:
+        src = payload['source']
+        # PowerShell sometimes wraps values into an object with a 'value' key
+        if isinstance(src, dict) and 'value' in src:
+            src = src['value']
+        # If it's not a string, coerce to string
+        if not isinstance(src, str):
+            src = str(src)
+    else:
+        # fallback: read raw body
+        body_bytes = await request.body()
+        try:
+            src = body_bytes.decode('utf-8')
+        except Exception:
+            src = str(body_bytes)
+
+    # If we still don't have a source, return a validation-like error
+    if src is None:
+        return {"error": {"phase": "gateway", "message": "missing source in request"}}
+
     # 1) tokenize
-    t = requests.post(f"{LEXER_URL}/tokenize", json={"source": body.source})
+    t = requests.post(f"{LEXER_URL}/tokenize", json={"source": src})
     tj = t.json()
     if "error" in tj:
         return {"error": {"phase": "lexer", **tj["error"]}}
@@ -40,8 +69,16 @@ def compile_code(body: Source):
     if "error" in gj:
         return {"error": {"phase": "codegen", **gj["error"]}}
 
-    # Return machine code and a download link (proxied from codegen)
+    # Return machine code and a download link (proxied through the gateway)
+    download_url = str(request.base_url) + "download"
     return {
         "machine": gj.get("machine", ""),
-        "download": f"{CODEGEN_URL}/download"  # exposed on localhost via compose
+        "download": download_url
     }
+
+
+@app.get("/download")
+def download_proxy():
+    # Proxy the download through the gateway so clients can fetch from localhost:5000/download
+    r = requests.get(f"{CODEGEN_URL}/download", stream=True)
+    return Response(content=r.content, media_type="text/plain")

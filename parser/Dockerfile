@@ -3,6 +3,6 @@ WORKDIR /app
 COPY parser/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY parser/service.py /app/service.py
-COPY parser.py /app/parser.py
+COPY core_parser.py /app/core_parser.py
 EXPOSE 5002
 CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "5002"]

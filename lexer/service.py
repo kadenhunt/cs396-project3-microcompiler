@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import tempfile
-from lexer import Lexer
+from core_lexer import Lexer
 
 app = FastAPI(title="lexer")
 
@@ -20,3 +20,8 @@ def tokenize(body: Source):
         return {"tokens": out}
     except Exception as e:
         return {"error": {"phase": "lexer", "message": str(e)}}
+
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True, "phase": "lexer"}

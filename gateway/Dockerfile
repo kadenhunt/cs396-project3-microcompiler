@@ -4,4 +4,5 @@ COPY gateway/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY gateway/service.py /app/service.py
 EXPOSE 5000
-CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "5000"]
+COPY gateway/wait_and_run.py /app/wait_and_run.py
+CMD ["python", "/app/wait_and_run.py"]

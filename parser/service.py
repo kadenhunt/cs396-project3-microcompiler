@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Any, List, Optional
-from parser import Parser
+from core_parser import Parser
 
 app = FastAPI(title="parser")
 
@@ -24,3 +24,8 @@ def parse(body: InTokens):
         return {"ast": ser(ast)}
     except Exception as e:
         return {"error": {"phase": "parser", "message": str(e)}}
+
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True, "phase": "parser"}

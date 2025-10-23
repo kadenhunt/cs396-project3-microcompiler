@@ -1,57 +1,51 @@
-version: "3.9"
 
 services:
   lexer:
     build:
       context: .
       dockerfile: ./lexer/Dockerfile
-    ports: ["5001:5001"]
-    networks: [compiler]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5001/healthz"]
-      interval: 5s
-      timeout: 2s
-      retries: 10
+    container_name: lexer
+    ports:
+      - "5001:5001"
+    networks: [net]
 
   parser:
     build:
       context: .
       dockerfile: ./parser/Dockerfile
-    ports: ["5002:5002"]
-    depends_on: [lexer]
-    networks: [compiler]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5002/healthz"]
-      interval: 5s
-      timeout: 2s
-      retries: 10
+    container_name: parser
+    ports:
+      - "5002:5002"
+    depends_on:
+      - lexer
+    networks: [net]
 
   codegen:
     build:
       context: .
       dockerfile: ./codegen/Dockerfile
-    ports: ["5003:5003"]
-    depends_on: [parser]
+    container_name: codegen
+    ports:
+      - "5003:5003"
     volumes:
       - ./output:/output
-    networks: [compiler]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5003/healthz"]
-      interval: 5s
-      timeout: 2s
-      retries: 10
+    depends_on:
+      - parser
+    networks: [net]
 
   gateway:
     build:
       context: .
       dockerfile: ./gateway/Dockerfile
-    ports: ["5000:5000"]
+    container_name: gateway
+    ports:
+      - "5000:5000"
     depends_on:
       - lexer
       - parser
       - codegen
-    networks: [compiler]
+    networks: [net]
 
 networks:
-  compiler:
+  net:
     driver: bridge

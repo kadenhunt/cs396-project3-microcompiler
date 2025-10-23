@@ -1,6 +1,6 @@
-from lexer import Lexer
-from parser import Parser
-from codegen import CodeGen  # decoupled later for containerization prep
+from core_lexer import Lexer
+from core_parser import Parser
+from core_codegen import CodeGen  # decoupled later for containerization prep
 
 def main():
     #Lexical Analysis

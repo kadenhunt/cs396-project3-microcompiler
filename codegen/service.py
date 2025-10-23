@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Any
 import os
-from codegen import CodeGen
+from core_codegen import CodeGen
 
 app = FastAPI(title="codegen")
 
@@ -25,3 +25,8 @@ def generate(body: InAST):
 def download():
     path = "/output/out.asm"
     return FileResponse(path, media_type="text/plain", filename="out.asm")
+
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True, "phase": "codegen"}
